@@ -4,16 +4,22 @@ from pathlib import Path
 import cv2
 import screeninfo
 
+from messages_manager import Messages
+
 
 def main():
     # get arguments
     parser = ArgumentParser()
     parser.add_argument('-p', '--images_path', type=str, help='path to images directory')
     parser.add_argument('-t', '--time', type=float, default=5, help='time in second for each image')
+    parser.add_argument('-r', '--reminders_path', type=str, default='reminders.txt',
+                        help='path to reminders txt file')
     args = parser.parse_args()
 
     directory = args.images_path
     assert directory is not None, 'User must enter images path with -p argument'
+
+    messages_manager = Messages(path=args.reminders_path)
 
     # read screen height and width
     screen = screeninfo.get_monitors()[0]
@@ -30,6 +36,7 @@ def main():
         return False
 
     while True:
+        messages_manager.update()
         for filename in Path(directory).glob('*[.j][jp][epn]g'):
             # read image
             im = cv2.imread(str(filename))

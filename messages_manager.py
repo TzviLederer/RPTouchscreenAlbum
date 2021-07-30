@@ -29,16 +29,18 @@ def filter_df(df):
 
 
 class Messages:
-    def __init__(self):
-        self.df = load_messages()
+    def __init__(self, path='reminders.txt'):
+        self.df = load_messages(path)
         self.df = filter_df(self.df)
         self.df['red'] = False
 
         self.now = datetime.now().date()
 
+        self.path = path
+
     def update(self):
         if datetime.now().date() != self.now:
-            self.df = load_messages()
+            self.df = load_messages(self.path)
             self.df = filter_df(self.df)
             self.df['red'] = False
 
@@ -49,7 +51,7 @@ class Messages:
         self.df.loc[index, 'red'] = True
 
     def get_messages(self):
-        return self.df[self.df['red']]['Message'].tolist()
+        return self.df[~self.df['red']]['Message'].tolist()
 
 
 def main():
