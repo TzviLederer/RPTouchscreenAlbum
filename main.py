@@ -1,9 +1,11 @@
 from argparse import ArgumentParser
 from pathlib import Path
+import time
 
 import cv2
 import screeninfo
 
+from display import Display, bar_boundaries, rectangle_boundaries
 from messages_manager import Messages
 
 
@@ -20,6 +22,7 @@ def main():
     assert directory is not None, 'User must enter images path with -p argument'
 
     messages_manager = Messages(path=args.reminders_path)
+    display = Display(messages_manager)
 
     # read screen height and width
     screen = screeninfo.get_monitors()[0]
@@ -30,11 +33,13 @@ def main():
     cv2.namedWindow(window_name, cv2.WND_PROP_FULLSCREEN)
     cv2.moveWindow(window_name, screen.x - 1, screen.y - 1)
     cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    cv2.setMouseCallback(window_name, click_callback, {'display_manager': display, 'shape': (height, width)})
 
     if not list(Path(directory).glob('*[.j][jp][epn]g')):
         print('Directory is empty. Make sure that the path is right and the images has the right formats (read README)')
         return False
 
+    i = 0
     while True:
         messages_manager.update()
         for filename in Path(directory).glob('*[.j][jp][epn]g'):
@@ -49,10 +54,16 @@ def main():
             # crop image to fit the screen
             im = crop(im, height, width, new_shape)
 
-            cv2.imshow(window_name, im)
-            k = cv2.waitKey(args.time * 1000)
-            if k == ord('q') or k == 27:
-                return False
+            t = time.time()
+            while time.time() - t < args.time:
+                i += 1
+
+                im_display = display.draw_on_frame(frame=im, i=i)
+
+                cv2.imshow(window_name, im_display)
+                k = cv2.waitKey(1)
+                if k == ord('q') or k == 27:
+                    return False
 
 
 def resize(im, height, width):
@@ -71,6 +82,23 @@ def crop(im, height, width, new_shape):
         new_x = int((new_shape[0] - width) / 2)
         im = im[:, new_x:new_x + width]
     return im
+
+
+def click_callback(event, x, y, flags, param):
+    if event == cv2.EVENT_LBUTTONDOWN:
+        display_manager = param['display_manager']
+        if display_manager.rectangle:
+            (x0, y0), (x1, y1) = rectangle_boundaries
+            if x1 < 0:
+                x1 = param['shape'][1] + x1
+            if y1 < 0:
+                y1 = param['shape'][0] + y1
+            if x0 < x < x1 and y0 < y < y1:
+                display_manager.rectangle = False
+        else:
+            y0, y1 = bar_boundaries
+            if y0 < y < y1:
+                display_manager.rectangle = True
 
 
 if __name__ == '__main__':

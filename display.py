@@ -9,7 +9,7 @@ bar_text_size = 2
 bar_text_thickness = 2
 bar_boundaries = (20, 60)
 bar_text_y = 50
-bar_color_ratio = 0.8
+bar_color_ratio = 0.9
 bar_separator = '     '
 bar_text_speed = 5
 
@@ -19,7 +19,7 @@ rectangle_text_thickness = 3
 rectangle_boundaries = ((30, 30), (-30, -30))
 rectangle_text_gap = 70
 rectangle_text_origin = (70, 80)
-rectangle_color_ratio = 0.6
+rectangle_color_ratio = 0.9
 
 
 class Display:
@@ -28,6 +28,9 @@ class Display:
         self.rectangle = False
 
     def draw_on_frame(self, frame, i=0):
+        if len(self.reminders.get_messages()) == 0:
+            return frame.copy()
+
         frame_display = frame.copy() / 255
         if self.rectangle:
             return np.uint8(self.draw_rectangle(frame_display) * 255)
