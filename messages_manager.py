@@ -48,10 +48,10 @@ class Messages:
 
     def read(self, index):
         assert index in self.df.index, 'Wrong index'
-        self.df.loc[index, 'red'] = True
+        self.df.loc[index, 'red'] = not(self.df.loc[index, 'red'])
 
     def get_messages(self):
-        return self.df[~self.df['red']]['Message'].tolist()
+        return self.df['Message'].tolist(), self.df['red'].tolist()
 
 
 def main():

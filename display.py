@@ -1,3 +1,5 @@
+from itertools import compress
+
 import cv2
 import numpy as np
 
@@ -16,10 +18,13 @@ bar_text_speed = 5
 rectangle_text_color = (1., 1., 1.)
 rectangle_text_size = 3
 rectangle_text_thickness = 3
-rectangle_boundaries = ((30, 30), (-30, -30))
+rectangle_boundaries = ((50, 30), (-50, -30))
 rectangle_text_gap = 70
-rectangle_text_origin = (70, 80)
+rectangle_text_origin = (110, 80)
 rectangle_color_ratio = 0.9
+rectangle_box_origin = (70, 55)
+rectangle_box_size = 20
+rectangle_box_color = (1., 1., 1.)
 
 
 class Display:
@@ -28,7 +33,7 @@ class Display:
         self.rectangle = False
 
     def draw_on_frame(self, frame, i=0):
-        if len(self.reminders.get_messages()) == 0:
+        if len(self.reminders.get_messages()[0]) == 0:
             return frame.copy()
 
         frame_display = frame.copy() / 255
@@ -41,21 +46,47 @@ class Display:
         (x_0, y_0), (x_1, y_1) = rectangle_boundaries
         frame[y_0:y_1, x_0:x_1, :] *= rectangle_color_ratio
 
-        messages = self.reminders.get_messages()
+        messages, red = self.reminders.get_messages()
         x_t_0, y_t_0 = rectangle_text_origin
         self._draw_rect_messages(frame, messages, x_t_0, y_t_0, rectangle_text_thickness + 4, (0, 0, 0))
-        self._draw_rect_messages(frame, messages, x_t_0, y_t_0, rectangle_text_thickness, rectangle_text_color)
+        self._draw_rect_messages(frame, messages, x_t_0, y_t_0, rectangle_text_thickness, rectangle_text_color, red)
+
+        for i, r in enumerate(red):
+            start_point = (rectangle_box_origin[0], rectangle_box_origin[1] + i * rectangle_text_gap)
+            end_point = (rectangle_box_origin[0] + rectangle_box_size,
+                         rectangle_box_origin[1] + i * rectangle_text_gap + rectangle_box_size)
+            cv2.rectangle(frame, start_point, end_point, color=(0, 0, 0), thickness=rectangle_text_thickness + 4)
+            if r:
+                cv2.rectangle(frame, start_point, end_point, color=(0, 1, 0), thickness=rectangle_text_thickness)
+            else:
+                cv2.rectangle(frame, start_point, end_point, color=rectangle_box_color, thickness=rectangle_text_thickness)
         return frame
 
     @staticmethod
-    def _draw_rect_messages(frame, messages, x_t_0, y_t_0, thickness, color):
+    def _draw_rect_messages(frame, messages, x_t_0, y_t_0, thickness, color_org, red=None):
         for i, m in enumerate(messages):
+            color = Display.infer_color(color_org, i, red)
             cv2.putText(frame, text=m, org=(x_t_0, y_t_0 + i * rectangle_text_gap), fontFace=font,
                         fontScale=rectangle_text_size, thickness=thickness,
                         color=color)
 
+    @staticmethod
+    def infer_color(color_org, i, red):
+        if red is not None:
+            if red[i]:
+                color = (0, 1, 0)
+            else:
+                color = color_org
+        else:
+            color = color_org
+        return color
+
     def draw_bar(self, frame, i):
-        text = bar_separator.join(self.reminders.get_messages())
+        messages = [m for m, r in zip(self.reminders.get_messages()[0], self.reminders.get_messages()[1]) if not r]
+        if messages == []:
+            return frame
+
+        text = bar_separator.join(messages)
 
         (bar_length, _), _ = cv2.getTextSize(text, fontFace=font, fontScale=bar_text_size, thickness=bar_text_thickness)
         org = ((-i * bar_text_speed) % (frame.shape[1] + bar_length) - bar_length, bar_text_y)

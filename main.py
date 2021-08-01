@@ -5,7 +5,8 @@ import time
 import cv2
 import screeninfo
 
-from display import Display, bar_boundaries, rectangle_boundaries
+from display import Display, bar_boundaries, rectangle_boundaries, rectangle_box_origin, rectangle_box_size, \
+    rectangle_text_gap
 from messages_manager import Messages
 
 
@@ -16,6 +17,7 @@ def main():
     parser.add_argument('-t', '--time', type=float, default=5, help='time in second for each image')
     parser.add_argument('-r', '--reminders_path', type=str, default='reminders.txt',
                         help='path to reminders txt file')
+    parser.add_argument('-d', '--debug', type=bool, default=False, help='enter True will enter debug mode')
     args = parser.parse_args()
 
     directory = args.images_path
@@ -27,6 +29,8 @@ def main():
     # read screen height and width
     screen = screeninfo.get_monitors()[0]
     width, height = screen.width, screen.height
+    if args.debug:
+        width, height = 800, 480
 
     # create display window
     window_name = 'projector'
@@ -88,17 +92,30 @@ def click_callback(event, x, y, flags, param):
     if event == cv2.EVENT_LBUTTONDOWN:
         display_manager = param['display_manager']
         if display_manager.rectangle:
+            for i, index in enumerate(display_manager.reminders.df.index.to_list()):
+                start_point = (rectangle_box_origin[0], rectangle_box_origin[1] + i * rectangle_text_gap)
+                end_point = (rectangle_box_origin[0] + rectangle_box_size,
+                             rectangle_box_origin[1] + i * rectangle_text_gap + rectangle_box_size)
+                if start_point[0] < x < end_point[0] and start_point[1] < y < end_point[1]:
+                    display_manager.reminders.read(index)
+                    return
+
             (x0, y0), (x1, y1) = rectangle_boundaries
-            if x1 < 0:
-                x1 = param['shape'][1] + x1
-            if y1 < 0:
-                y1 = param['shape'][0] + y1
-            if x0 < x < x1 and y0 < y < y1:
+            x1, y1 = standardize_indexes(param, x1, y1)
+            if not (x0 < x < x1 and y0 < y < y1):
                 display_manager.rectangle = False
         else:
             y0, y1 = bar_boundaries
             if y0 < y < y1:
                 display_manager.rectangle = True
+
+
+def standardize_indexes(param, x1, y1):
+    if x1 < 0:
+        x1 = param['shape'][1] + x1
+    if y1 < 0:
+        y1 = param['shape'][0] + y1
+    return x1, y1
 
 
 if __name__ == '__main__':

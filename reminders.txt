@@ -1,4 +1,3 @@
-w;6;Its my birthday
-o;29/3/2020;GGG
-o;30/7/2021;Jack's birthday
-o;29/3/2020;GGG
+w;1;It's Sunday
+o;1/8/2021;The date is 1/8/2021
+m;1;First day in the month
